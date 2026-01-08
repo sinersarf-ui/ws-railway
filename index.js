@@ -1,42 +1,32 @@
-const http = require("http");
-const WebSocket = require("ws");
-const httpProxy = require("http-proxy");
+import http from "http";
+import { WebSocketServer } from "ws";
 
-const PORT = 3000;
+const PORT = process.env.PORT || 3000;
 
-// Proxy target (contoh)
-const TARGET = "ws://example.com:8080";
-
-const proxy = httpProxy.createProxyServer({
-  target: TARGET,
-  ws: true,
-  changeOrigin: true,
-});
-
+// HTTP server biasa (WAJIB)
 const server = http.createServer((req, res) => {
   res.writeHead(200);
-  res.end("WSS Proxy Running");
+  res.end("WSS Koyeb aktif");
 });
 
-const wss = new WebSocket.Server({ server });
+// WebSocket server
+const wss = new WebSocketServer({ server });
 
-wss.on("connection", (client, req) => {
-  console.log("Client connected");
+wss.on("connection", (ws, req) => {
+  console.log("Client connected:", req.socket.remoteAddress);
 
-  client.on("message", (message) => {
-    console.log("Message:", message.toString());
+  ws.send("Halo dari WSS Koyeb!");
+
+  ws.on("message", (msg) => {
+    console.log("Pesan:", msg.toString());
+    ws.send(`Echo: ${msg}`);
   });
 
-  client.on("close", () => {
-    console.log("Client disconnected");
+  ws.on("close", () => {
+    console.log("Client disconnect");
   });
-});
-
-// Handle WebSocket upgrade
-server.on("upgrade", (req, socket, head) => {
-  proxy.ws(req, socket, head);
 });
 
 server.listen(PORT, () => {
-  console.log(`WSS Proxy running on port ${PORT}`);
+  console.log(`Server running on port ${PORT}`);
 });
