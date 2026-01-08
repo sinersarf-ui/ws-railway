@@ -1,32 +1,43 @@
 import http from "http";
-import { WebSocketServer } from "ws";
+import WebSocket, { WebSocketServer } from "ws";
+import httpProxy from "http-proxy";
 
-const PORT = process.env.PORT || 3000;
+const PORT = process.env.PORT || 8000;
 
-// HTTP server biasa (WAJIB)
+// HTTP server (WAJIB di Koyeb)
 const server = http.createServer((req, res) => {
   res.writeHead(200);
-  res.end("WSS Koyeb aktif");
+  res.end("WS Proxy is running\n");
 });
 
-// WebSocket server
+// WebSocket Server
 const wss = new WebSocketServer({ server });
 
-wss.on("connection", (ws, req) => {
-  console.log("Client connected:", req.socket.remoteAddress);
+// Proxy target (contoh)
+const proxy = httpProxy.createProxyServer({
+  target: "wss://echo.websocket.events",
+  ws: true,
+  secure: true
+});
 
-  ws.send("Halo dari WSS Koyeb!");
+wss.on("connection", (client, req) => {
+  console.log("Client connected");
 
-  ws.on("message", (msg) => {
-    console.log("Pesan:", msg.toString());
-    ws.send(`Echo: ${msg}`);
+  const targetSocket = new WebSocket("wss://echo.websocket.events");
+
+  client.on("message", (msg) => {
+    targetSocket.send(msg);
   });
 
-  ws.on("close", () => {
-    console.log("Client disconnect");
+  targetSocket.on("message", (msg) => {
+    client.send(msg);
+  });
+
+  client.on("close", () => {
+    targetSocket.close();
   });
 });
 
 server.listen(PORT, () => {
-  console.log(`Server running on port ${PORT}`);
+  console.log("running wsProxy running...");
 });
